@@ -1,0 +1,13 @@
+{
+  "name": "simon42-dashboard-strategy",
+  "version": "1.0.0",
+  "description": "Development environment for Simon42 Dashboard Strategy",
+  "scripts": {
+    "start": "http-server dist -p 8080 --cors -c-1"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4"
+  }
+}

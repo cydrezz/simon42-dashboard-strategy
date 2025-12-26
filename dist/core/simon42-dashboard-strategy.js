@@ -127,4 +127,5 @@ class Simon42DashboardStrategy {
 }
 
 // Registriere Custom Element mit dem korrekten Namen
-customElements.define("ll-strategy-simon42-dashboard", Simon42DashboardStrategy);
+//customElements.define("ll-strategy-simon42-dashboard", Simon42DashboardStrategy);
+customElements.define("ll-strategy-dashboard-simon42-dashboard", Simon42DashboardStrategy);
