@@ -1,17 +1,25 @@
 {
-  "name": "Simon42 Dashboard Dev",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "name": "Home Assistant Dev",
+  "image": "ghcr.io/home-assistant/devcontainer:stable",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
   "customizations": {
     "vscode": {
-      "settings": {
-        "editor.formatOnSave": true
-      },
       "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "redhat.vscode-yaml",
+        "keesschollaart.vscode-home-assistant",
+        "github.vscode-github-actions",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode"
-      ]
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
     }
   },
-  "forwardPorts": [8080],
-  "postCreateCommand": "npm install"
+  "postCreateCommand": "pip install -r requirements_test.txt && pre-commit install && npm install"
 }
