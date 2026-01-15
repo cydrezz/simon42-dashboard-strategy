@@ -8,14 +8,18 @@
 export function createOverviewSection(data) {
   const { someSensorId, showSearchCard, config, hass } = data;
   
-  const cards = [
-    {
+  const cards = [];
+
+  if (config.overview_custom_card) {
+    cards.push(config.overview_custom_card);
+  } else {
+    cards.push({
       type: "heading",
       heading: "Übersicht",
       heading_style: "title",
       icon: "mdi:overscan"
-    }
-  ];
+    });
+  }
 
   // Prüfe ob Alarm-Entity konfiguriert ist
   const alarmEntity = config.alarm_entity;
@@ -323,7 +327,10 @@ export function createWeatherEnergySection(weatherEntity, showWeather, showEnerg
 
       // Füge Karte hinzu: Custom Card (YAML), Custom Entity oder Standard Dashboard
       if (config.energy_custom_card) {
-        sections[sections.length - 1].cards.push(config.energy_custom_card);
+        sections[sections.length - 1].cards.push({
+          grid_options: { columns: "full" },
+          ...config.energy_custom_card
+        });
       } else if (config.energy_entity) {
         sections[sections.length - 1].cards.push({
           type: "tile",
@@ -370,7 +377,10 @@ export function createWeatherEnergySection(weatherEntity, showWeather, showEnerg
     });
     
     if (config.energy_custom_card) {
-      cards.push(config.energy_custom_card);
+      cards.push({
+        grid_options: { columns: "full" },
+        ...config.energy_custom_card
+      });
     } else if (config.energy_entity) {
       cards.push({
         type: "tile",
