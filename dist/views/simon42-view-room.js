@@ -127,12 +127,6 @@ class Simon42ViewRoomStrategy {
           const deviceName = device.name_by_user || device.name;
           if (!deviceName) continue;
 
-          const deviceNameLower = deviceName.toLowerCase();
-          const friendlyNameLower = friendlyName.toLowerCase();
-          const entityIdLower = entity.entity_id.toLowerCase();
-          
-          // Normalisierung: Entferne alle Sonderzeichen für flexibleren Vergleich
-          // z.B. "Shelly H&T" -> "shellyht" findet auch "shellyht"
           const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
           const deviceNameNorm = normalize(deviceName);
           const friendlyNameNorm = normalize(friendlyName);
@@ -142,8 +136,8 @@ class Simon42ViewRoomStrategy {
           // 1. Exakter Substring-Match (wie bisher)
           // 2. Normalisierter Match (ignoriert Leerzeichen, Bindestriche, etc.)
           if (
-            friendlyNameLower.includes(deviceNameLower) || 
-            entityIdLower.includes(deviceNameLower) || 
+            friendlyName.toLowerCase().includes(deviceName.toLowerCase()) || 
+            entity.entity_id.toLowerCase().includes(deviceName.toLowerCase()) || 
             (deviceNameNorm.length > 2 && friendlyNameNorm.includes(deviceNameNorm)) ||
             (deviceNameNorm.length > 2 && entityIdNorm.includes(deviceNameNorm))
           ) {
@@ -251,6 +245,18 @@ class Simon42ViewRoomStrategy {
         roomEntities.switches.push(entityId);
         continue;
       }
+
+      // NEU: Controls (Numbers, Selects, Buttons, Text, Datetime) -> zu Steuerung
+      if (['number', 'input_number', 'select', 'input_select', 'button', 'input_button', 'text', 'input_text', 'datetime', 'input_datetime'].includes(domain)) {
+        roomEntities.numbers.push(entityId);
+        continue;
+      }
+
+      // NEU: Water Heater -> zu Klima
+      if (domain === 'water_heater') {
+        roomEntities.climate.push(entityId);
+        continue;
+      }
       
       // NEU: Kamera-Erkennung
       if (domain === 'camera') {
@@ -277,7 +283,7 @@ class Simon42ViewRoomStrategy {
           continue;
         }
         // Luftfeuchtigkeit
-        if (deviceClass === 'humidity' || unit === '%' || unit === 'g/m³' || unit === 'g/m3' || friendlyName.includes('humidity') || friendlyName.includes('feuchtigkeit')) {
+        if (deviceClass === 'humidity' || deviceClass === 'moisture' || unit === '%' || unit === 'g/m³' || unit === 'g/m3' || friendlyName.includes('humidity') || friendlyName.includes('feuchtigkeit')) {
           sensorEntities.humidity.push(entityId);
           continue;
         }
@@ -315,7 +321,11 @@ class Simon42ViewRoomStrategy {
           entityId.includes('health') || 
           entityId.includes('status') || 
           entityId.includes('notification') ||
-          entityId.includes('starts')
+          entityId.includes('dhw') || // NEU: DHW / Warmwasser
+          entityId.includes('hot_water') || // NEU: Hot Water
+          entityId.includes('starts') ||
+          entityId.includes('duration') || // NEU: Charge duration
+          ['min', 'mins', 'h', 'hr', 'hrs'].includes(unitLower) // NEU: Zeit-Einheiten
         ) {
           sensorEntities.sys_status.push(entityId);
           continue;
@@ -502,6 +512,9 @@ class Simon42ViewRoomStrategy {
             }));
             devSensors.energy.forEach(id => statusCards.push({
               type: "tile", entity: id, name: stripAreaName(id, area, hass), icon: "mdi:lightning-bolt", state_content: "state"
+            }));
+            devSensors.sys_status.forEach(id => statusCards.push({
+              type: "tile", entity: id, name: stripAreaName(id, area, hass), icon: "mdi:information-outline", state_content: "state"
             }));
             devSensors.sys_status.forEach(id => statusCards.push({
               type: "tile", entity: id, name: stripAreaName(id, area, hass), icon: "mdi:information-outline", state_content: "state"
@@ -879,9 +892,9 @@ class Simon42ViewRoomStrategy {
         cards: [
           {
             type: "heading",
-            heading: "Sonstiges",
+            heading: "Steuerung",
             heading_style: "title",
-            icon: "mdi:dots-horizontal"
+            icon: "mdi:gamepad-variant"
           },
           ...miscCards
         ]
