@@ -266,9 +266,10 @@ export function createAreasSection(visibleAreas, groupByFloors = false, hass = n
  * @param {boolean} showWeather - Ob Wetter-Karte angezeigt werden soll
  * @param {boolean} showEnergy - Ob Energie-Dashboard angezeigt werden soll
  * @param {boolean} groupByFloors - Ob nach Etagen gruppiert wird
+ * @param {Object} config - Die Strategie-Konfiguration (für energy_entity)
  * @returns {Array|Object|null} Section(s) oder null wenn keine Karten angezeigt werden
  */
-export function createWeatherEnergySection(weatherEntity, showWeather, showEnergy, groupByFloors = false) {
+export function createWeatherEnergySection(weatherEntity, showWeather, showEnergy, groupByFloors = false, config = {}) {
   // Wenn Etagen-Gruppierung aktiv: Separate Sections zurückgeben
   if (groupByFloors) {
     const sections = [];
@@ -304,12 +305,24 @@ export function createWeatherEnergySection(weatherEntity, showWeather, showEnerg
             heading_style: "title",
             icon: "mdi:lightning-bolt"
           },
-          {
-            type: "energy-distribution",
-            link_dashboard: true
-          }
         ]
       });
+
+      // Füge Karte hinzu: Custom Card (YAML), Custom Entity oder Standard Dashboard
+      if (config.energy_custom_card) {
+        sections[sections.length - 1].cards.push(config.energy_custom_card);
+      } else if (config.energy_entity) {
+        sections[sections.length - 1].cards.push({
+          type: "tile",
+          entity: config.energy_entity,
+          state_content: "state"
+        });
+      } else {
+        sections[sections.length - 1].cards.push({
+          type: "energy-distribution",
+          link_dashboard: true
+        });
+      }
     }
     
     // Gib leeres Array zurück wenn keine Sections vorhanden
@@ -342,10 +355,21 @@ export function createWeatherEnergySection(weatherEntity, showWeather, showEnerg
       heading_style: "title",
       icon: "mdi:lightning-bolt"
     });
-    cards.push({
-      type: "energy-distribution",
-      link_dashboard: true
-    });
+    
+    if (config.energy_custom_card) {
+      cards.push(config.energy_custom_card);
+    } else if (config.energy_entity) {
+      cards.push({
+        type: "tile",
+        entity: config.energy_entity,
+        state_content: "state"
+      });
+    } else {
+      cards.push({
+        type: "energy-distribution",
+        link_dashboard: true
+      });
+    }
   }
   
   // Gib null zurück wenn keine Karten vorhanden (verhindert leere Section)

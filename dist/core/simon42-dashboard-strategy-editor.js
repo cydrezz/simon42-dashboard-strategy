@@ -71,6 +71,8 @@ class Simon42DashboardStrategyEditor extends HTMLElement {
     const showCoversSummary = this._config.show_covers_summary !== false;
     const summariesColumns = this._config.summaries_columns || 2;
     const alarmEntity = this._config.alarm_entity || '';
+    const energyEntity = this._config.energy_entity || '';
+    const energyCustomCard = this._config.energy_custom_card || null;
     const favoriteEntities = this._config.favorite_entities || [];
     const roomPinEntities = this._config.room_pin_entities || [];
     const hasSearchCardDeps = this._checkSearchCardDependencies();
@@ -97,6 +99,22 @@ class Simon42DashboardStrategyEditor extends HTMLElement {
     const hiddenAreas = this._config.areas_display?.hidden || [];
     const areaOrder = this._config.areas_display?.order || [];
 
+    // Bereite YAML für die Anzeige vor
+    let energyCustomCardYaml = '';
+    if (energyCustomCard) {
+      try {
+        if (window.jsyaml) {
+          energyCustomCardYaml = window.jsyaml.dump(energyCustomCard);
+        } else if (window.js_yaml) {
+          energyCustomCardYaml = window.js_yaml.dump(energyCustomCard);
+        } else {
+          energyCustomCardYaml = JSON.stringify(energyCustomCard, null, 2);
+        }
+      } catch (e) {
+        energyCustomCardYaml = JSON.stringify(energyCustomCard, null, 2);
+      }
+    }
+
     // Setze HTML-Inhalt mit Styles und Template
     this.innerHTML = `
       <style>${getEditorStyles()}</style>
@@ -112,6 +130,8 @@ class Simon42DashboardStrategyEditor extends HTMLElement {
         hasSearchCardDeps,
         summariesColumns,
         alarmEntity,
+        energyEntity,
+        energyCustomCardYaml,
         alarmEntities,
         favoriteEntities,
         roomPinEntities,
@@ -131,6 +151,8 @@ class Simon42DashboardStrategyEditor extends HTMLElement {
     attachCoversSummaryCheckboxListener(this, (showCoversSummary) => this._showCoversSummaryChanged(showCoversSummary));
     this._attachSummariesColumnsListener();
     this._attachAlarmEntityListener();
+    this._attachEnergyEntityListener();
+    this._attachEnergyCardConfigListener();
     this._attachFavoritesListeners();
     this._attachRoomPinsListeners();
     attachAreaCheckboxListeners(this, (areaId, isVisible) => this._areaVisibilityChanged(areaId, isVisible));
@@ -154,40 +176,6 @@ class Simon42DashboardStrategyEditor extends HTMLElement {
     
     // Restore expanded state
     this._restoreExpandedState();
-  }
-
-  _createFavoritesPicker(favoriteEntities) {
-    const container = this.querySelector('#favorites-picker-container');
-    if (!container) {
-      console.warn('Favorites picker container not found');
-      return;
-    }
-
-    // Erstelle ha-entities-picker Element
-    const picker = document.createElement('ha-entities-picker');
-    
-    // Füge Picker zum Container hinzu
-    container.innerHTML = '';
-    container.appendChild(picker);
-    
-    // Setze Properties nach einem kurzen Delay (gibt dem Element Zeit zu initialisieren)
-    requestAnimationFrame(() => {
-      picker.hass = this._hass;
-      picker.value = favoriteEntities || [];
-      
-      // Setze Attribute
-      picker.setAttribute('label', 'Favoriten-Entitäten');
-      picker.setAttribute('placeholder', 'Entität hinzufügen...');
-      picker.setAttribute('allow-custom-entity', '');
-      
-      // Event Listener für Änderungen
-      picker.addEventListener('value-changed', (e) => {
-        e.stopPropagation();
-        this._favoriteEntitiesChanged(e.detail.value);
-      });
-      
-      console.log('Favorites picker created:', picker);
-    });
   }
 
   _attachSummariesColumnsListener() {
@@ -253,6 +241,70 @@ class Simon42DashboardStrategyEditor extends HTMLElement {
     if (!entityId || entityId === '') {
       delete newConfig.alarm_entity;
     }
+
+    this._config = newConfig;
+    this._fireConfigChanged(newConfig);
+  }
+
+  _attachEnergyEntityListener() {
+    const energySelect = this.querySelector('#energy-entity');
+    if (energySelect) {
+      energySelect.addEventListener('change', (e) => {
+        this._energyEntityChanged(e.target.value);
+      });
+    }
+  }
+
+  _energyEntityChanged(entityId) {
+    if (!this._config || !this._hass) {
+      return;
+    }
+
+    const newConfig = {
+      ...this._config,
+      energy_entity: entityId
+    };
+
+    // Wenn leer, entfernen wir die Property
+    if (!entityId || entityId === '') {
+      delete newConfig.energy_entity;
+    }
+
+    this._config = newConfig;
+    this._fireConfigChanged(newConfig);
+  }
+
+  _attachEnergyCardConfigListener() {
+    const textarea = this.querySelector('#energy-custom-card');
+    if (textarea) {
+      textarea.addEventListener('change', (e) => {
+        this._energyCardConfigChanged(e.target.value);
+      });
+    }
+  }
+
+  _energyCardConfigChanged(value) {
+    if (!this._config || !this._hass) return;
+
+    let cardConfig = null;
+    if (value && value.trim() !== '') {
+      try {
+        if (window.jsyaml) {
+          cardConfig = window.jsyaml.load(value);
+        } else if (window.js_yaml) {
+          cardConfig = window.js_yaml.load(value);
+        } else {
+          cardConfig = JSON.parse(value);
+        }
+      } catch (e) {
+        alert("Fehler beim Lesen der Konfiguration. Bitte stelle sicher, dass es gültiges YAML ist.");
+        return;
+      }
+    }
+
+    const newConfig = { ...this._config };
+    if (cardConfig) newConfig.energy_custom_card = cardConfig;
+    else delete newConfig.energy_custom_card;
 
     this._config = newConfig;
     this._fireConfigChanged(newConfig);
@@ -551,28 +603,6 @@ class Simon42DashboardStrategyEditor extends HTMLElement {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  // Kann weg?
-  _favoriteEntitiesChanged(entities) {
-    if (!this._config || !this._hass) {
-      return;
-    }
-
-    console.log('Favorites changed:', entities);
-
-    const newConfig = {
-      ...this._config,
-      favorite_entities: entities
-    };
-
-    // Wenn leer, entfernen wir die Property
-    if (!entities || entities.length === 0) {
-      delete newConfig.favorite_entities;
-    }
-
-    this._config = newConfig;
-    this._fireConfigChanged(newConfig);
   }
 
   _restoreExpandedState() {

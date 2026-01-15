@@ -5,6 +5,38 @@ import { stripAreaName, isEntityHiddenOrDisabled, sortByLastChanged } from '../u
 
 class Simon42ViewRoomStrategy {
   static async generate(config, hass) {
+                // Hilfsfunktion: Gehört Entity zum aktuellen Bereich?
+                function belongsToCurrentArea(entity) {
+                  if (entity.area_id) {
+                    return entity.area_id === area.area_id;
+                  } else if (entity.device_id && areaDevices.has(entity.device_id)) {
+                    return true;
+                  }
+                  return false;
+                }
+            // Hilfsfunktion: Entity ausblenden?
+            function isEntityExcluded(entityId) {
+              return excludeLabels.has(entityId) || isEntityHiddenOrDisabled(hass, entityId);
+            }
+        // Hilfsfunktion: Batterie-Farbe (rot, gelb, grau, grün)
+        function getBatteryColor(state) {
+          if (state && state.state && !isNaN(Number(state.state))) {
+            const value = Number(state.state);
+            if (value > 60 && value <= 100) return "green";
+            if (value > 30 && value <= 60) return "grey";
+            if (value > 20 && value <= 30) return "yellow";
+            if (value > 0 && value <= 20) return "red";
+          }
+          return undefined;
+        }
+
+        // Hilfsfunktion: Fenster/Tür-Farbe
+        function getWindowColor(state) {
+          if (state && (state.state === 'on' || state.state === 'open')) {
+            return "red";
+          }
+          return "green";
+        }
     const { area, devices, entities } = config;
     
     // Hole Dashboard-Config für Raum-Pins (wird über ViewBuilder übergeben)
@@ -47,6 +79,7 @@ class Simon42ViewRoomStrategy {
       voc: [],         // VOC (flüchtige organische Verbindungen)
       motion: [],      // Bewegungsmelder
       occupancy: [],   // Präsenzmelder
+      windows: [],     // Fenster/Türen (NEU)
       illuminance: [], // Helligkeit
       battery: []      // Batterie (nur niedrige Werte)
     };
@@ -168,10 +201,11 @@ class Simon42ViewRoomStrategy {
       
       // === SENSOREN FÜR BADGES ===
       if (domain === 'sensor') {
-        // Batterie (nur niedrige Werte < 20%) - ZUERST prüfen, bevor % für Humidity matcht!
+        // Batterie: Zeige ALLE Batterien an (Test-Modus)
         if (entityId.includes('battery') || deviceClass === 'battery') {
           const batteryLevel = parseFloat(state.state);
-          if (!isNaN(batteryLevel) && batteryLevel < 20) {
+          // Limit auf 101 erhöht, damit du beide Sensoren zum Testen siehst!
+          if (!isNaN(batteryLevel) && batteryLevel <= 100) {
             sensorEntities.battery.push(entityId);
           }
           continue;
@@ -215,6 +249,9 @@ class Simon42ViewRoomStrategy {
       
       // Binäre Sensoren
       if (domain === 'binary_sensor') {
+        // DEBUG: Zeige alle Binary Sensoren im Raum
+        console.log(`[Simon42] Binary Sensor gefunden: ${entityId}, Class: ${deviceClass}, State: ${state.state}`);
+
         // Bewegung
         if (deviceClass === 'motion') {
           sensorEntities.motion.push(entityId);
@@ -223,6 +260,12 @@ class Simon42ViewRoomStrategy {
         // Präsenz
         if (deviceClass === 'presence') {
           sensorEntities.occupancy.push(entityId);
+          continue;
+        }
+        // Fenster / Türen / Garage (NEU)
+        if (['window', 'door', 'garage_door', 'opening'].includes(deviceClass)) {
+          sensorEntities.windows.push(entityId);
+          continue; // Wichtig: continue, damit es nicht woanders reinrutscht
         }
       }
     }
@@ -266,19 +309,13 @@ class Simon42ViewRoomStrategy {
     roomEntities.switches = applyGroupFilter('switches');
     roomEntities.cameras = applyGroupFilter('cameras'); // NEU
 
-    // === BADGES ERSTELLEN ===
-    const badges = [];
-
     // Priorisiere Temperatur und Luftfeuchtigkeit aus area.temperature_entity_id und area.humidity_entity_id
-    // wenn diese existieren und im Raum sind
     let primaryTempSensor = null;
     let primaryHumiditySensor = null;
 
-    // Prüfe ob area Attribute für Temperatur/Luftfeuchtigkeit gesetzt sind
     if (area.temperature_entity_id && 
         hass.states[area.temperature_entity_id] && 
         !excludeLabels.has(area.temperature_entity_id)) {
-      // Prüfe ob versteckt über hass.entities
       const entityRegistry = hass.entities?.[area.temperature_entity_id];
       if (!entityRegistry || (!entityRegistry.hidden_by && !entityRegistry.disabled_by)) {
         primaryTempSensor = area.temperature_entity_id;
@@ -288,125 +325,189 @@ class Simon42ViewRoomStrategy {
     if (area.humidity_entity_id && 
         hass.states[area.humidity_entity_id] && 
         !excludeLabels.has(area.humidity_entity_id)) {
-      // Prüfe ob versteckt über hass.entities
       const entityRegistry = hass.entities?.[area.humidity_entity_id];
       if (!entityRegistry || (!entityRegistry.hidden_by && !entityRegistry.disabled_by)) {
         primaryHumiditySensor = area.humidity_entity_id;
       }
     }
 
-    // Temperatur Badge
-    const tempSensor = primaryTempSensor || sensorEntities.temperature[0];
-    if (tempSensor) {
-      badges.push({
-        type: "entity",
-        entity: tempSensor,
-        color: "red",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // Luftfeuchtigkeit Badge
-    const humiditySensor = primaryHumiditySensor || sensorEntities.humidity[0];
-    if (humiditySensor) {
-      badges.push({
-        type: "entity",
-        entity: humiditySensor,
-        color: "indigo",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // Feinstaub PM2.5
-    if (sensorEntities.pm25.length > 0) {
-      badges.push({
-        type: "entity",
-        entity: sensorEntities.pm25[0],
-        color: "orange",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // Feinstaub PM10
-    if (sensorEntities.pm10.length > 0) {
-      badges.push({
-        type: "entity",
-        entity: sensorEntities.pm10[0],
-        color: "orange",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // CO2
-    if (sensorEntities.co2.length > 0) {
-      badges.push({
-        type: "entity",
-        entity: sensorEntities.co2[0],
-        color: "green",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // VOC
-    if (sensorEntities.voc.length > 0) {
-      badges.push({
-        type: "entity",
-        entity: sensorEntities.voc[0],
-        color: "purple",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // Bewegung (zeige Badge nur wenn Bewegung erkannt)
-    const activeMotion = sensorEntities.motion.filter(id => {
-      const state = hass.states[id];
-      return state && state.state === 'on';
-    });
-    if (activeMotion.length > 0) {
-      badges.push({
-        type: "entity",
-        entity: activeMotion[0],
-        color: "yellow",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // Präsenz (zeige Badge nur wenn Präsenz erkannt)
-    const activeOccupancy = sensorEntities.occupancy.filter(id => {
-      const state = hass.states[id];
-      return state && state.state === 'on';
-    });
-    if (activeOccupancy.length > 0) {
-      badges.push({
-        type: "entity",
-        entity: activeOccupancy[0],
-        color: "cyan",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // Helligkeit
-    if (sensorEntities.illuminance.length > 0) {
-      badges.push({
-        type: "entity",
-        entity: sensorEntities.illuminance[0],
-        color: "amber",
-        tap_action: { action: "more-info" }
-      });
-    }
-
-    // Batterie (niedrige Werte)
-    if (sensorEntities.battery.length > 0) {
-      badges.push({
-        type: "entity",
-        entity: sensorEntities.battery[0],
-        color: "red",
-        tap_action: { action: "more-info" }
-      });
-    }
-
+    // === BADGES ERSTELLEN (DEAKTIVIERT) ===
+    const badges = [];
+    
+    // Wir nutzen jetzt Sections für alles!
+    
     // === HAUPTINHALT - SECTIONS ===
     const sections = [];
+
+    // NEU: Section "Klima & Status" (Sortiert nach Geräten)
+    const statusCards = [];
+    const processedEntities = new Set(); // Damit wir nichts doppelt hinzufügen
+
+    // 1. Iteriere über alle Geräte im Raum
+    areaDeviceObjects.forEach(device => {
+        const deviceEntitiesList = entityDeviceMap.get(device.id) || [];
+        // Sammle relevante Sensoren für dieses Gerät
+        const devSensors = {
+          temp: [],
+          hum: [],
+          window: [],
+          battery: [],
+          other: [] // CO2, PM, etc.
+        };
+
+        deviceEntitiesList.forEach(entityId => {
+          if (processedEntities.has(entityId) || isEntityExcluded(entityId)) return;
+
+          let assigned = false;
+          // Prüfe Kategorie
+          if (sensorEntities.temperature.includes(entityId)) { devSensors.temp.push(entityId); assigned = true; }
+          else if (sensorEntities.humidity.includes(entityId)) { devSensors.hum.push(entityId); assigned = true; }
+          else if (sensorEntities.windows.includes(entityId)) { devSensors.window.push(entityId); assigned = true; }
+          else if (sensorEntities.battery.includes(entityId)) { devSensors.battery.push(entityId); assigned = true; }
+          else if ([...sensorEntities.co2, ...sensorEntities.pm25, ...sensorEntities.pm10, ...sensorEntities.voc, ...sensorEntities.illuminance].includes(entityId)) {
+            devSensors.other.push(entityId); assigned = true;
+          }
+
+          // NEU: Wenn keine Kategorie zugeordnet, als "misc" markieren
+          if (!assigned) {
+            if (!devSensors.misc) devSensors.misc = [];
+            devSensors.misc.push(entityId);
+            assigned = true;
+          }
+
+          if (assigned) processedEntities.add(entityId);
+        });
+
+        // Prüfe, ob das Gerät mindestens einen Sensor hat
+        const hasAnySensor = devSensors.temp.length || devSensors.hum.length || devSensors.window.length || devSensors.battery.length || devSensors.other.length;
+        if (hasAnySensor) {
+            // Füge vor die Karten für dieses Gerät ein Heading ein
+            statusCards.push({
+                type: "heading",
+                heading: device.name_by_user || device.name || "Gerät",
+                heading_style: "section",
+                icon: device.icon || undefined
+            });
+
+            // Füge Karten in logischer Reihenfolge hinzu (Temp -> Hum -> Window -> Other -> Bat)
+                        // ...existing code...
+                        if (devSensors.misc && devSensors.misc.length > 0) {
+                          devSensors.misc.forEach(id => {
+                            const state = hass.states[id];
+                            statusCards.push({
+                              type: "tile",
+                              entity: id,
+                              name: stripAreaName(id, area, hass),
+                              state_content: "state"
+                            });
+                          });
+                        }
+            devSensors.temp.forEach(id => statusCards.push({
+              type: "tile", entity: id, name: stripAreaName(id, area, hass), icon: "mdi:thermometer", color: "red", state_content: "state"
+            }));
+            devSensors.hum.forEach(id => statusCards.push({
+              type: "tile", entity: id, name: stripAreaName(id, area, hass), icon: "mdi:water-percent", color: "indigo", state_content: "state"
+            }));
+            devSensors.window.forEach(id => {
+                const state = hass.states[id];
+                statusCards.push({
+                  type: "tile",
+                  entity: id,
+                  name: stripAreaName(id, area, hass),
+                  color: getWindowColor(state),
+                  state_content: "state"
+                });
+            });
+            devSensors.other.forEach(id => statusCards.push({
+              type: "tile", entity: id, name: stripAreaName(id, area, hass), state_content: ["state", "last_changed"]
+            }));
+            devSensors.battery.forEach(id => {
+                const state = hass.states[id];
+                statusCards.push({
+                  type: "tile",
+                  entity: id,
+                  name: stripAreaName(id, area, hass),
+                  color: getBatteryColor(state),
+                  state_content: "state"
+                });
+            });
+        }
+    });
+
+    // 2. Füge restliche Sensoren hinzu (die keinem Device zugeordnet waren)
+    const allStatusSensors = [
+        ...sensorEntities.temperature, ...sensorEntities.humidity, ...sensorEntities.windows, 
+        ...sensorEntities.battery, ...sensorEntities.co2, ...sensorEntities.pm25, 
+        ...sensorEntities.pm10, ...sensorEntities.voc, ...sensorEntities.illuminance
+    ];
+
+    allStatusSensors.forEach(entityId => {
+        if (!processedEntities.has(entityId) && !isEntityExcluded(entityId)) {
+            // Generische Karte für den Rest
+            const state = hass.states[entityId];
+            let color = undefined;
+            if (sensorEntities.windows.includes(entityId)) {
+              color = getWindowColor(state);
+            } else if (sensorEntities.battery.includes(entityId)) {
+              color = getBatteryColor(state);
+            }
+            statusCards.push({
+              type: "tile",
+              entity: entityId,
+              name: stripAreaName(entityId, area, hass),
+              color: color,
+              state_content: "state"
+            });
+            processedEntities.add(entityId);
+        }
+    });
+
+    // NEU: Füge alle restlichen Entities als "Sonstige" hinzu
+    const miscEntities = entities.filter(e =>
+      !processedEntities.has(e.entity_id) &&
+      !isEntityExcluded(e.entity_id) &&
+      belongsToCurrentArea(e)
+    );
+    if (miscEntities.length > 0) {
+      const miscCards = [
+        {
+          type: "heading",
+          heading: "Sonstige",
+          heading_style: "section",
+          icon: "mdi:dots-horizontal"
+        },
+        ...miscEntities.map(e => ({
+          type: "tile",
+          entity: e.entity_id,
+          name: stripAreaName(e.entity_id, area, hass),
+          state_content: "state"
+        }))
+      ];
+      sections.push({
+        type: "grid",
+        style: "max-height: 80vh; overflow-y: auto;",
+        cards: miscCards
+      });
+    }
+
+    // Wenn Karten vorhanden, füge Section GANZ OBEN hinzu
+    if (statusCards.length > 0) {
+        sections.push({
+          type: "grid",
+          style: "max-height: 80vh; overflow-y: auto;",
+          cards: [
+            {
+              type: "heading",
+              heading: "Klima & Status",
+              heading_style: "title",
+              icon: "mdi:home-thermometer"
+            },
+            ...statusCards
+          ]
+        });
+    }
+
+
 
     // NEU: Kameras-Section (ganz oben nach Badges)
     if (roomEntities.cameras.length > 0) {
@@ -749,7 +850,10 @@ class Simon42ViewRoomStrategy {
         ]
       });
     }
-
+    // Wenn keine Sections vorhanden sind, Raum-View komplett ausblenden
+    if (sections.length === 0) {
+      return null;
+    }
     return {
       type: "sections",
       header: {

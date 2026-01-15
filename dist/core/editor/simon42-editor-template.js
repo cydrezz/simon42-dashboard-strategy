@@ -3,7 +3,7 @@
 // ====================================================================
 // HTML-Template für den Dashboard Strategy Editor
 
-export function renderEditorHTML({ allAreas, hiddenAreas, areaOrder, showEnergy, showWeather, showSummaryViews, showRoomViews, showSearchCard, hasSearchCardDeps, summariesColumns, alarmEntity, alarmEntities, favoriteEntities, roomPinEntities, allEntities, groupByFloors, showCoversSummary }) {
+export function renderEditorHTML({ allAreas, hiddenAreas, areaOrder, showEnergy, showWeather, showSummaryViews, showRoomViews, showSearchCard, hasSearchCardDeps, summariesColumns, alarmEntity, energyEntity, energyCustomCardYaml, alarmEntities, favoriteEntities, roomPinEntities, allEntities, groupByFloors, showCoversSummary }) {
   return `
     <div class="card-config">
       <div class="section">
@@ -28,7 +28,28 @@ export function renderEditorHTML({ allAreas, hiddenAreas, areaOrder, showEnergy,
           <label for="show-energy">Energie-Dashboard anzeigen</label>
         </div>
         <div class="description">
-          Zeigt die Energie-Verteilungskarte in der Übersicht an, wenn Energiedaten verfügbar sind.
+          Zeigt standardmäßig das Home Assistant Energie-Dashboard an.
+        </div>
+        <div class="form-row">
+          <label for="energy-entity" style="margin-right: 8px; min-width: 120px;">Alternative Entität:</label>
+          <select id="energy-entity" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color);">
+            <option value="">Standard (Energie-Dashboard)</option>
+            ${allEntities.map(entity => `
+              <option value="${entity.entity_id}" ${entity.entity_id === energyEntity ? 'selected' : ''}>${entity.name}</option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="description">
+          Falls das Standard-Dashboard leer ist, wähle hier direkt deinen Sensor (z.B. Netzbezug) aus, um ihn stattdessen anzuzeigen.
+        </div>
+        <div class="form-row" style="align-items: flex-start; margin-top: 16px;">
+          <div style="flex: 1;">
+            <label for="energy-custom-card" style="display: block; margin-bottom: 8px; font-weight: 500;">Oder eigene Karte (YAML):</label>
+            <textarea id="energy-custom-card" rows="10" style="width: 100%; font-family: monospace; padding: 8px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); resize: vertical;" placeholder="type: custom:power-flow-card-plus...">${energyCustomCardYaml || ''}</textarea>
+            <div class="description" style="margin-left: 0; margin-top: 4px;">
+              Füge hier den YAML-Code deiner Karte ein (z.B. Power Flow Card Plus). Diese ersetzt das Standard-Dashboard.
+            </div>
+          </div>
         </div>
       </div>
 
