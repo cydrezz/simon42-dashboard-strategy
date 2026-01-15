@@ -147,8 +147,9 @@ export function createOverviewSection(data) {
  * @param {Array} visibleAreas - Sichtbare Bereiche
  * @param {boolean} groupByFloors - Ob nach Etagen gruppiert werden soll
  * @param {Object} hass - Home Assistant Objekt (für Floor-Namen)
+ * @param {Object} config - Dashboard Konfiguration
  */
-export function createAreasSection(visibleAreas, groupByFloors = false, hass = null) {
+export function createAreasSection(visibleAreas, groupByFloors = false, hass = null, config = {}) {
   // Wenn keine Etagen-Gruppierung gewünscht: alte Logik
   if (!groupByFloors || !hass) {
     return {
@@ -159,17 +160,21 @@ export function createAreasSection(visibleAreas, groupByFloors = false, hass = n
           heading_style: "title",
           heading: "Bereiche"
         },
-        ...visibleAreas.map((area) => ({
+        ...visibleAreas.map((area) => {
+          if (config.area_custom_cards && config.area_custom_cards[area.area_id]) {
+            return config.area_custom_cards[area.area_id];
+          }
+          return {
           type: "area",
           area: area.area_id,
           display_type: "compact",
           alert_classes: [ "motion", "moisture", "occupancy" ],
-          sensor_classes: [ "temperature", "humidity", "volatile_organic_compounds_parts" ],
+          sensor_classes: [ "temperature", "humidity", "volatile_organic_compounds_parts", "carbon_dioxide" ],
           features: [{ type: "area-controls" }],
           features_position: "inline",
           navigation_path: area.area_id,
           vertical: false
-        }))
+        };})
       ]
     };
   }
@@ -216,17 +221,21 @@ export function createAreasSection(visibleAreas, groupByFloors = false, hass = n
           heading: floorName,
           icon: floorIcon
         },
-        ...areas.map((area) => ({
+        ...areas.map((area) => {
+          if (config.area_custom_cards && config.area_custom_cards[area.area_id]) {
+            return config.area_custom_cards[area.area_id];
+          }
+          return {
           type: "area",
           area: area.area_id,
           display_type: "compact",
           alert_classes: [ "motion", "moisture", "occupancy" ],
-          sensor_classes: [ "temperature", "humidity", "volatile_organic_compounds_parts" ],
+          sensor_classes: [ "temperature", "humidity", "volatile_organic_compounds_parts", "carbon_dioxide" ],
           features: [{ type: "area-controls" }],
           features_position: "inline",
           navigation_path: area.area_id,
           vertical: false
-        }))
+        };})
       ]
     });
   });
@@ -242,17 +251,21 @@ export function createAreasSection(visibleAreas, groupByFloors = false, hass = n
           heading: "Weitere Bereiche",
           icon: "mdi:home-outline"
         },
-        ...areasWithoutFloor.map((area) => ({
+        ...areasWithoutFloor.map((area) => {
+          if (config.area_custom_cards && config.area_custom_cards[area.area_id]) {
+            return config.area_custom_cards[area.area_id];
+          }
+          return {
           type: "area",
           area: area.area_id,
           display_type: "compact",
           alert_classes: [ "motion", "moisture", "occupancy" ],
-          sensor_classes: [ "temperature", "humidity", "volatile_organic_compounds_parts" ],
+          sensor_classes: [ "temperature", "humidity", "volatile_organic_compounds_parts", "carbon_dioxide" ],
           features: [{ type: "area-controls" }],
           features_position: "inline",
           navigation_path: area.area_id,
           vertical: false
-        }))
+        };})
       ]
     });
   }

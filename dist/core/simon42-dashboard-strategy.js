@@ -76,7 +76,7 @@ class Simon42DashboardStrategy {
     const groupByFloors = config.group_by_floors === true;
 
     // Erstelle Bereiche-Section(s)
-    const areasSections = createAreasSection(visibleAreas, groupByFloors, hass);
+    const areasSections = createAreasSection(visibleAreas, groupByFloors, hass, config);
 
     // Erstelle Wetter & Energie Section(s)
     const weatherEnergySection = createWeatherEnergySection(weatherEntity, showWeather, showEnergy, groupByFloors, config);

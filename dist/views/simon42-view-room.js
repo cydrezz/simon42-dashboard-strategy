@@ -211,7 +211,8 @@ class Simon42ViewRoomStrategy {
           continue;
         }
         // Temperatur
-        if (deviceClass === 'temperature' || unit === '°C' || unit === '°F') {
+        const unitLower = unit ? unit.toLowerCase() : '';
+        if ((deviceClass === 'temperature' || unit === '°C' || unit === '°F') && deviceClass !== 'power' && deviceClass !== 'energy' && !['w', 'kw', 'wh', 'kwh', 'va', 'var', 'watt', 'watts'].includes(unitLower)) {
           sensorEntities.temperature.push(entityId);
           continue;
         }
@@ -231,7 +232,8 @@ class Simon42ViewRoomStrategy {
           continue;
         }
         // CO2
-        if (deviceClass === 'carbon_dioxide' || entityId.includes('co2')) {
+        const friendlyName = state.attributes?.friendly_name?.toLowerCase() || '';
+        if (deviceClass === 'carbon_dioxide' || entityId.includes('co2') || entityId.includes('carbon_dioxide') || friendlyName.includes('co2') || friendlyName.includes('carbon dioxide') || unit === 'ppm') {
           sensorEntities.co2.push(entityId);
           continue;
         }
@@ -249,9 +251,6 @@ class Simon42ViewRoomStrategy {
       
       // Binäre Sensoren
       if (domain === 'binary_sensor') {
-        // DEBUG: Zeige alle Binary Sensoren im Raum
-        console.log(`[Simon42] Binary Sensor gefunden: ${entityId}, Class: ${deviceClass}, State: ${state.state}`);
-
         // Bewegung
         if (deviceClass === 'motion') {
           sensorEntities.motion.push(entityId);
@@ -358,6 +357,10 @@ class Simon42ViewRoomStrategy {
         deviceEntitiesList.forEach(entityId => {
           if (processedEntities.has(entityId) || isEntityExcluded(entityId)) return;
 
+          // Prüfe, ob die Entität explizit einem anderen Raum zugeordnet ist
+          const entityReg = hass.entities?.[entityId];
+          if (entityReg && entityReg.area_id && entityReg.area_id !== area.area_id) return;
+
           let assigned = false;
           // Prüfe Kategorie
           if (sensorEntities.temperature.includes(entityId)) { devSensors.temp.push(entityId); assigned = true; }
@@ -379,7 +382,7 @@ class Simon42ViewRoomStrategy {
         });
 
         // Prüfe, ob das Gerät mindestens einen Sensor hat
-        const hasAnySensor = devSensors.temp.length || devSensors.hum.length || devSensors.window.length || devSensors.battery.length || devSensors.other.length;
+        const hasAnySensor = devSensors.temp.length || devSensors.hum.length || devSensors.window.length || devSensors.battery.length || devSensors.other.length || (devSensors.misc && devSensors.misc.length > 0);
         if (hasAnySensor) {
             // Füge vor die Karten für dieses Gerät ein Heading ein
             statusCards.push({
