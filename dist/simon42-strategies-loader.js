@@ -32,6 +32,7 @@ import './cards/simon42-covers-group-card.js'; // NEU: Reaktive Covers Group Car
 
 // Lade Core-Module
 import './core/simon42-dashboard-strategy.js';
+import './core/simon42-2d-strategy.js';
 
 // Lade View-Module
 import './views/simon42-view-room.js';
@@ -40,4 +41,4 @@ import './views/simon42-view-covers.js';
 import './views/simon42-view-security.js';
 import './views/simon42-view-batteries.js';
 
-console.log('Simon42 Dashboard Strategies v1.0.3 (Patch 1) loaded successfully (with reactive lights + covers cards)!');
+console.log('Simon42 Dashboard Strategies v1.0.3 (Patch 1 + 2D Exp) loaded successfully!');
