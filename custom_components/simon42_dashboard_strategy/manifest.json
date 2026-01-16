@@ -1,0 +1,9 @@
+{
+  "domain": "simon42_dashboard_strategy",
+  "name": "Simon42 Dashboard Strategy",
+  "version": "0.0.1",
+  "documentation": "https://github.com/cydrezz/simon42-dashboard-strategy",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["@cydrezz"]
+}
