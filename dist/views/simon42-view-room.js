@@ -268,7 +268,7 @@ class Simon42ViewRoomStrategy {
       if (domain === 'sensor') {
         const friendlyName = state.attributes?.friendly_name?.toLowerCase() || '';
         // Batterie: Zeige ALLE Batterien an (Test-Modus)
-        if (entityId.includes('battery') || deviceClass === 'battery') {
+        if ((entityId.includes('battery') || deviceClass === 'battery') && unit === '%' && !entityId.includes('limit') && !entityId.includes('health')) {
           const batteryLevel = parseFloat(state.state);
           // Limit auf 101 erhöht, damit du beide Sensoren zum Testen siehst!
           if (!isNaN(batteryLevel) && batteryLevel <= 100) {
@@ -512,9 +512,6 @@ class Simon42ViewRoomStrategy {
             }));
             devSensors.energy.forEach(id => statusCards.push({
               type: "tile", entity: id, name: stripAreaName(id, area, hass), icon: "mdi:lightning-bolt", state_content: "state"
-            }));
-            devSensors.sys_status.forEach(id => statusCards.push({
-              type: "tile", entity: id, name: stripAreaName(id, area, hass), icon: "mdi:information-outline", state_content: "state"
             }));
             devSensors.sys_status.forEach(id => statusCards.push({
               type: "tile", entity: id, name: stripAreaName(id, area, hass), icon: "mdi:information-outline", state_content: "state"

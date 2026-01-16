@@ -177,6 +177,12 @@ class Simon42SummaryCard extends HTMLElement {
             return false;
           }
           
+          // Fix: Nur Entitäten mit Einheit '%' zulassen
+          if (state.attributes?.unit_of_measurement !== '%') return false;
+          
+          // Fix: Keine Limits oder Health-Sensoren
+          if (id.includes('limit') || id.includes('health')) return false;
+          
           // Exclude-Checks
           if (this._excludeLabelsSet.has(id)) return false;
           if (hiddenFromConfig.has(id)) return false;

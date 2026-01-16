@@ -40,6 +40,12 @@ class Simon42ViewBatteriesStrategy {
                          state.attributes?.device_class === 'battery';
         if (!isBattery) return false;
         
+        // Fix: Nur Entitäten mit Einheit '%' zulassen (filtert Power W, Temp °C etc.)
+        if (state.attributes?.unit_of_measurement !== '%') return false;
+        
+        // Fix: Keine Limits oder Health-Sensoren (z.B. Charge Limit)
+        if (entityId.includes('limit') || entityId.includes('health')) return false;
+        
         // 2. Registry-Check - DIREKT aus hass.entities (O(1) Lookup)
         const registryEntry = hass.entities?.[entityId];
         if (registryEntry?.hidden === true) return false;
