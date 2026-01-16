@@ -241,7 +241,7 @@ class Simon42ViewRoomStrategy {
         continue;
       }
       
-      if (domain === 'switch') {
+      if (domain === 'switch' || domain === 'input_boolean') {
         roomEntities.switches.push(entityId);
         continue;
       }
@@ -474,8 +474,7 @@ class Simon42ViewRoomStrategy {
             statusCards.push({
                 type: "heading",
                 heading: device.name_by_user || device.name || "Gerät",
-                heading_style: "section",
-                icon: device.icon || undefined
+                heading_style: "section"
             });
 
             // Füge Karten in logischer Reihenfolge hinzu (Temp -> Hum -> Window -> Other -> Bat)

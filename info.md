@@ -1,5 +1,7 @@
 # Simon42 Dashboard Strategy
 
+> Fork based on version: v1.0.2
+
 Eine modulare und hochkonfigurierbare Dashboard-Strategy für Home Assistant, die automatisch Views basierend auf Bereichen, Entitäten und deren Zuständen generiert.
 
 ## Features
@@ -15,6 +17,7 @@ Eine modulare und hochkonfigurierbare Dashboard-Strategy für Home Assistant, di
 Nach der Installation über HACS:
 
 1. Füge in deiner `configuration.yaml` hinzu:
+
    ```yaml
    lovelace:
      mode: storage
