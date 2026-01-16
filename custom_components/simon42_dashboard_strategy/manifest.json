@@ -5,5 +5,7 @@
   "documentation": "https://github.com/cydrezz/simon42-dashboard-strategy",
   "requirements": [],
   "dependencies": [],
-  "codeowners": ["@cydrezz"]
+  "codeowners": ["@cydrezz"],
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/cydrezz/simon42-dashboard-strategy/issues"
 }
