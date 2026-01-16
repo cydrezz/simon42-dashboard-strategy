@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 # package-lock.json wird oft committed, aber bei reinen HACS-Frontends manchmal weggelassen. 
 # Da es hier aber eine Dev-Umgebung ist, lassen wir es meist drin. 
 # Ich kommentiere es aus, damit es committed wird (Standard).
