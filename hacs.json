@@ -1,5 +1,6 @@
 {
   "name": "Simon42 Dashboard Strategy",
   "content_in_root": false,
-  "filename": "simon42-strategies-loader.js"
+  "filename": "dist/simon42-strategies-loader.js",
+  "render_readme": true
 }
